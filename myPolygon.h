@@ -4,7 +4,6 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <fstream>
 #include <algorithm>
 #include <map>
 
@@ -23,20 +22,34 @@ public:
     ~Node() {}
     coordinate get_coord() { return _c; }
     void set_next(Node* n) { next = n; }
+    void set_prev(Node* p) { prev = p; }
     Node* get_next() { return next; }
+    Node* get_prev() { return prev; }
+
+    bool operator==(Node& n) {
+        if (n.get_coord().first == _c.first && n.get_coord().second == _c.second)
+            return true;
+        return false;
+    }
 
 private:
     coordinate _c;
+    bool is_in = false;
     Node* next; // for traversing polygons
+    Node* prev;
 };
 
 class Polygon
 {
 public:
-    Polygon() {}
+    Polygon(): start_v(NULL) {}
     ~Polygon() {}
+    
+    void set_start_v(Node* n) { start_v = n; }
+    Node* get_start_v() { return start_v; }
+
 private:
-    Node* vertex; // start
+    Node* start_v; // start
 };
 
 class myPolygon
@@ -47,78 +60,45 @@ public:
 
     bool read_input(string& file);
     void run();
-    void merge();
-    void clip();
+    void merge(const string&);
+    void merge(Polygon* p_merge);
+    void clip(string&);
     void split();
+    
+    bool clockwise(Polygon* p) {
+        cout << "Deciding orentation..." << flush;
+        coordinate w = p->get_start_v()->get_coord();
+        coordinate x = p->get_start_v()->get_next()->get_coord();
+        coordinate y = p->get_start_v()->get_next()->get_next()->get_coord();
+        double val = (x.second - w.second) * (y.first - w.first) - (x.first - w.first) * (y.second - x.second);
+        if (val > 0) {
+            cout << "Clockwise!!" << endl;
+            return true;
+        }
+        else {
+            cout << "Counter-clockwise!!" << endl;
+            return false;
+        }
+    }
+
+    void change_orientation(Polygon* p) {
+        Node* n = p->get_start_v();
+        while (true) {
+            Node* prev = n->get_next();
+            n->set_next(n->get_prev());
+            n->set_prev(prev);
+            n = n->get_next();
+            if (*n == *p->get_start_v())
+                break;
+
+        }
+    }
 
 private:
-    Polygon p;
+    Polygon _p;
     vector<string> operation;
     map<string, vector<string> > data;
+    vector<Node*> intersect;
 };
-
-bool myPolygon::read_input(string& file)
-{
-    ifstream f(file.c_str());
-    if (!f.is_open()) {
-        cout << "File " << file << " not exists!!" << endl;
-        return false;
-    }
-
-    string buf;
-    getline(f, buf, '\n');
-
-    int begin = 10;
-    int end = 11;
-    for (size_t i = begin; i < buf.size(); i++) {
-        if (buf[i] == ';')
-            break;
-        if (buf[i] == ' ' || buf[i] =='\t') {
-            operation.push_back(buf.substr(begin, end-begin).c_str());
-            begin = end;
-        }
-        end += 1;
-    }
-    
-    while (getline(f, buf, '\n')) {
-        if (buf.substr(0, 4) == "DATA") {
-            string op = buf.substr(buf.size()-4, 2);
-            while (getline(f, buf, '\n')) {
-                if (buf == " " || buf == "END DATA")
-                    break;
-                data[op].push_back(buf);
-            }
-        }
-    }
-    return true;
-}
-
-void myPolygon::run()
-{
-    for (int i = 0; i < operation.size(); i++) {
-        string op =  operation[i];
-        if (op[0] == 'M')
-            merge();
-        else if (op[0] == 'C')
-            clip();
-        else if (op[0] == 'S')
-            split();
-    }
-}
-
-void myPolygon::merge()
-{
-
-}
-
-void myPolygon::clip()
-{
-
-}
-
-void myPolygon::split()
-{
-
-}
 
 #endif
