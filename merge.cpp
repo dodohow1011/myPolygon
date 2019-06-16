@@ -28,49 +28,27 @@ void myPolygon::merge(const string& s)
             end += 1;
         }
 
-        Node* current = NULL;
+        // Node* current = NULL;
         for (size_t j = 0; j < c.size(); j+=2) { // link vertex
             coordinate coord(c[j], c[j+1]);
-            Node* n = new Node(coord);
-            if (p->get_start_v() == NULL) {
-                p->set_start_v(n);
-                current = p->get_start_v();
-            }
-            else {
-                if (*(p->get_start_v()) == *n) {
-                    // cout << "Found starting vertex!!" << endl;
-                    assert (coord == p->get_start_v()->get_coord());
-                    current->set_next(p->get_start_v());
-                    p->get_start_v()->set_prev(current);
-                }
-
-                else {  
-                    current->set_next(n);
-                    n->set_prev(current);
-                    current = current->get_next();
-                }
-            }
+            p->add_node(coord);
         }
         
         if (!clockwise(p)) {
             change_orientation(p);
         }
         assert (clockwise(p));
-        current = p->get_start_v();
-        p->add_node(current);
-        Edge* e = new Edge();
-        e->set_node(current, current->get_next());
-        p->add_edge(e);
-        current = current->get_next();
+        size_t current = 0;
+        // Edge* e = new Edge();
         while (true) {
-            p->add_node(current);
             Edge* e = new Edge();
-            e->set_node(current, current->get_next());
+            e->set_vertex(p->get_node(current), p->get_node(current+1));
             p->add_edge(e);
-            current = current->get_next();
-            if (*current == *p->get_start_v())
+            current += 1;
+            if (p->get_node(current) == p->get_node(0))
                 break;
         }
+        // cout << p->get_edge_num() << flush << endl;
         merge(p);
     }
 
@@ -78,11 +56,46 @@ void myPolygon::merge(const string& s)
 
 }
 
-void myPolygon::merge(Polygon* p_merge) {
-    if (_p == NULL) 
-        _p = p_merge;
+void myPolygon::merge(Polygon* p) {
+    if (_p == NULL) {
+        _p = p;
+        // _p->print_polygon();
+    }
     else {
-        find_intersection(p_merge);
-        // add2list();
+        p_merge = p;
+        find_intersection();
+        print_intersection(); 
+        p_merge->print_polygon();
+        _p->print_polygon();
+        coordinate start;
+        for (size_t i = 0; i < _p->get_edge_num(); i++) {
+            start = _p->get_node(i);
+            if (isOutside(p_merge, start))
+                break;
+        }
+
+        vector<coordinate> result;
+        int change = 0;
+        result.push_back(start);
+        coordinate c = _p->next_node(start);
+        
+        for (size_t i = 0; i < _p->get_node_num()+p_merge->get_node_num(); i++) {
+            if (InInterList(c)) change = (change>0)? 0 : 1;
+            // cout << change << endl;
+            if (change == 0) {
+                result.push_back(c);
+                if (c == start)
+                    break;
+                c = _p->next_node(c);
+            }
+            else {
+                result.push_back(c);
+                c = p_merge->next_node(c);
+            }
+
+        }
+
+        _p->set_polygon(result);
+        _p->print_polygon();
     }
 }
