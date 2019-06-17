@@ -8,7 +8,17 @@
 
 using namespace std;
 
-void myPolygon::split()
+void myPolygon::split_horizontal()
+{
+
+}
+
+void myPolygon::split_vertical()
+{
+
+}
+
+void myPolygon::split_optimum()
 {
 
 }

@@ -26,15 +26,20 @@ void myPolygon::merge(const string& s)
         }
         
         vector<polygon> temp;
+        bool b;
         // vector<polygon>::iterator it = temp.begin();
         BOOST_FOREACH(polygon const& _p, p) {
             vector<polygon>::iterator it = temp.begin();
             vector<polygon> output;
-            boost::geometry::union_(_p, p_merge, output);
-            temp.insert(it, output.begin(), output.end());
+            b = boost::geometry::intersects(_p, p_merge);
+            if (!b) temp.push_back(_p);
+            else {
+                boost::geometry::union_(_p, p_merge, output);
+                temp.insert(it, output.begin(), output.end());
+            }
         }
-
         p = temp;
+        simplify();
     }
 
     // print_poly();
