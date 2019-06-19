@@ -17,6 +17,7 @@ int main(int argc, char* argv[])
     if (!myPol.read_input(input_file))
         return 0;
     myPol.run();
+    myPol.write(output_file);
 
     return 0;
 }

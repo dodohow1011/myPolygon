@@ -2,13 +2,10 @@
 #include <vector>
 #include <fstream>
 #include <string>
-#include <iostream>
-#include <map>
-#include <climits>
 #include "assert.h"
 
 using namespace std;
-
+using bg::get;
 
 bool myPolygon::read_input(string& file)
 {
@@ -45,10 +42,27 @@ bool myPolygon::read_input(string& file)
             }
         }
     }
-    cout << "Operation: ";
+    cout << "Operation: " << flush;
     for (size_t i = 0; i < operation.size(); i++)
-        cout << operation[i];
+        cout << operation[i] << flush;
     cout << endl;
     return true;
+}
+
+void myPolygon::write(string& file) 
+{
+    ofstream out(file.c_str());
+    bg::model::box<point> b;
+    out << rects.size() << endl;
+    for (size_t i = 0; i < rects.size(); i++) {
+        bg::envelope(rects[i], b);
+        double min_x = get<bg::min_corner, 0>(b);
+        double min_y = get<bg::min_corner, 1>(b);
+        double max_x = get<bg::max_corner, 0>(b);
+        double max_y = get<bg::max_corner, 1>(b);
+        out << "RECT ";
+        out << min_x << " " << min_y << " " << max_x << " " << max_y << endl;
+    }
+    out.close();
 }
 

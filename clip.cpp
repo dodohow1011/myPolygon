@@ -9,22 +9,24 @@ void myPolygon::clip(const string& s)
     cout << "# of datas: " << data[s].size() << endl;
     for (size_t i = 0; i < data[s].size(); i++) { // clip line by line
         cout << data[s][i] << flush << endl;
-        boost::geometry::read_wkt(data[s][i], p_clip);
-        double area = boost::geometry::area(p_clip);
+        bg::read_wkt(data[s][i], p_clip);
+        double area = bg::area(p_clip);
         if (area < 0)
-            boost::geometry::correct(p_clip);
+            bg::correct(p_clip);
 
         vector<polygon> temp;
         BOOST_FOREACH(polygon const& _p, p) {
             vector<polygon>::iterator it = temp.begin();
             vector<polygon> output;
-            boost::geometry::difference(_p, p_clip, output);
+            bg::difference(_p, p_clip, output);
+            // if (output.size() == 0) break;
             temp.insert(it, output.begin(), output.end());
+            output.clear();
         }
         p = temp;
-        simplify();
+        // simplify();
     }
-    
-    // print_poly();
+    simplify();
+    print_poly();
     cout << "Clip " << s << " Done!!" << endl;
 }
