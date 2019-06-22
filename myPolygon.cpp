@@ -49,19 +49,32 @@ bool myPolygon::read_input(string& file)
     return true;
 }
 
+bool less_x(boost::polygon::rectangle_data<double> rect1 , boost::polygon::rectangle_data<double> rect2) {
+    bg::model::box<point> b1;
+    bg::envelope(rect1, b1);
+    bg::model::box<point> b2;
+    bg::envelope(rect2, b2);
+    if(get<bg::min_corner, 0>(b1) == get<bg::min_corner, 0>(b2)){
+        return get<bg::min_corner, 1>(b1) < get<bg::min_corner, 1>(b2);
+    }
+    return get<bg::min_corner, 0>(b1) < get<bg::min_corner, 0>(b2);
+}
+
 void myPolygon::write(string& file) 
 {
     ofstream out(file.c_str());
     bg::model::box<point> b;
-    out << rects.size() << endl;
+    //out << rects.size() << endl;
+    cout<<"number of rects: "<<rects.size()<<endl;
+    sort(rects.begin(), rects.end(), less_x);
     for (size_t i = 0; i < rects.size(); i++) {
         bg::envelope(rects[i], b);
-        double min_x = get<bg::min_corner, 0>(b);
-        double min_y = get<bg::min_corner, 1>(b);
-        double max_x = get<bg::max_corner, 0>(b);
-        double max_y = get<bg::max_corner, 1>(b);
+        size_t min_x = get<bg::min_corner, 0>(b);
+        size_t min_y = get<bg::min_corner, 1>(b);
+        size_t max_x = get<bg::max_corner, 0>(b);
+        size_t max_y = get<bg::max_corner, 1>(b);
         out << "RECT ";
-        out << min_x << " " << min_y << " " << max_x << " " << max_y << endl;
+        out << min_x << " " << min_y << " " << max_x << " " << max_y <<" ;"<<endl;
     }
     out.close();
 }
