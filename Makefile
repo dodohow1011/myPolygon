@@ -18,8 +18,8 @@ merge.o: merge.cpp myPolygon.h
 clip.o: clip.cpp myPolygon.h
 	$(CC) $(CFLAGS) -c clip.cpp myPolygon.h
 
-split.o: split.cpp myPolygon.h
-	$(CC) $(CFLAGS) -c split.cpp myPolygon.h
+split.o: split.cpp myPolygon.h interGraph.h
+	$(CC) $(CFLAGS) -c split.cpp myPolygon.h interGraph.h
 
 .PHONY: clean
 clean:

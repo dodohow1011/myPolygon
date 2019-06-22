@@ -19,6 +19,10 @@ using namespace std;
 namespace bg = boost::geometry;
 
 class myPolygon;
+class Node;
+class SPolygon;
+class InterGraph;
+typedef pair<double, double> coordinate;
 
 typedef bg::model::d2::point_xy<double> point;
 typedef bg::model::polygon<point> polygon;
@@ -26,6 +30,168 @@ typedef bg::model::linestring<point> linestring;
 typedef boost::polygon::polygon_90_with_holes_data<double> Polygon90;
 typedef boost::polygon::polygon_traits<Polygon90>::point_type MyPoint;
 typedef boost::polygon::polygon_with_holes_traits<Polygon90>::hole_type hole;
+
+class Node
+{
+public:
+    Node(coordinate c): _c(c), is_concave(0), is_ind_point(INT_MAX), 
+                        non_ind_idx(INT_MAX), next(NULL), prev(NULL), other_ind_point(NULL){}
+    ~Node() {}
+    coordinate get_coord() { return _c; }
+    void set_next(Node* n) { next = n; }
+    void set_prev(Node* p) { prev = p; }
+    Node* get_next() { return next; }
+    Node* get_prev() { return prev; }
+
+    bool operator==(Node& n) {
+        if (n.get_coord().first == _c.first && n.get_coord().second == _c.second)
+            return true;
+        return false;
+    }
+
+    //for split
+    void set_concave(size_t state){ is_concave = state;}    // state 1: clockwise  state 2: counter clockwise
+    size_t get_concave_state(){ return is_concave; }
+
+    void print(){
+        cout<<"("<<_c.first<<", "<<_c.second<<")"<<"    ";
+    }
+    void print_concave(){
+        cout<<is_concave<<" ";
+    }
+
+    void set_ind_point(Node* other){
+        is_ind_point = 0;
+        other_ind_point = other;
+    }
+    void set_ind_point_index(size_t i){is_ind_point = i;}
+    Node* get_other_ind_node(){return other_ind_point;}
+    size_t get_ind_point(){return is_ind_point;}
+    void set_non_ind_point_index(size_t k){non_ind_idx = k;}
+    size_t get_non_ind_point_index(){return non_ind_idx;}
+
+private:
+    coordinate _c;
+    size_t is_concave;  // for finding concave vertex 0    
+    size_t is_ind_point; //-1
+    size_t non_ind_idx; //-1
+    Node* next; // for traversing polygons
+    Node* prev;
+    Node* other_ind_point; //0
+    
+};
+
+class SPolygon
+{
+public:
+    SPolygon(): start_v(NULL), num_hole(0) {}
+    ~SPolygon() {}
+    
+    void set_start_v() { start_v = node_list[0];}
+    Node* get_start_v() { return node_list[0]; }
+    void add_node(Node* n) { node_list.push_back(n); }
+    size_t get_node_num() { return node_list.size(); }
+    void add_hole(Node* n, size_t m) { hole_list[m].push_back(n);}
+    size_t get_hole_num() { return num_hole; }
+    void link_hole(){//(size_t head, size_t size){
+        list<Node*>::iterator j;
+        list<Node*>::iterator copy_j;
+        for(size_t i = 0; i<num_hole ;i++){
+            list<Node*>::iterator copy_end = --hole_list[i].end();
+            for(j= hole_list[i].begin(); j != hole_list[i].end(); ++j){
+                Node* n = *j;
+                copy_j = hole_list[i].end();
+                if(j==hole_list[i].begin()){
+                    copy_j = j;
+                    n->set_next(*(++copy_j));
+                    n->set_prev(*(copy_end));
+                }
+                else if(j == copy_end){
+                    copy_j = j;
+                    n->set_next(*(hole_list[i].begin()));
+                    n->set_prev(*(--copy_j));
+                }
+                else{
+                    copy_j = j;
+                    n->set_next(*(++copy_j));
+                    copy_j = j;
+                    n->set_prev(*(--copy_j));
+                }
+            }
+        }
+    }
+    void link_node(){
+        for(size_t i = 0;i<node_list.size();i++){
+            if(i==0){
+                node_list[i]->set_next(node_list[i+1]);
+                node_list[i]->set_prev(node_list[node_list.size()-1]);
+                cout<<"linking node!!!"<<i<<endl;
+            }
+            else if(i == node_list.size()-1){
+                node_list[i]->set_next(node_list[0]);
+                node_list[i]->set_prev(node_list[i-1]);
+            }
+            else{
+                node_list[i]->set_next(node_list[i+1]);
+                node_list[i]->set_prev(node_list[i-1]);
+            }
+        }
+        node_list[0]->get_prev()->print();
+    }
+    void print_node(){
+        for(size_t i = 0; i< node_list.size();i++){
+            cout<<node_list[i]->get_coord().first<<" "<<node_list[i]->get_coord().second<<endl;
+        }
+    }
+    void print_con(){
+        for(size_t i = 0; i< node_list.size(); i++){
+            node_list[i]->print_concave();
+        }
+        cout<<endl;
+    }
+    void print_hole(){
+        list<Node*>::iterator j;
+        cout<<"print hole list: "<<endl;
+        for(size_t i =0; i< num_hole ; i++){
+            for(j= hole_list[i].begin(); j != hole_list[i].end(); ++j){
+                Node* n = *j;
+                cout<<n->get_coord().first<<" "<<n->get_coord().second<<endl;
+            }
+        }
+    }
+
+    void find_con_v();
+    InterGraph* construct_inters_graph();
+
+    void reset(){
+        for(size_t i =0 ;i<node_list.size();i++)
+            delete node_list[i];
+        list<Node*>::iterator j;
+        for(size_t i =0; i<num_hole;i++){
+            for(j= hole_list[i].begin(); j != hole_list[i].end(); ++j){
+                delete *j;
+            }
+        }   
+        node_list.clear();
+        delete [] hole_list;
+        con_v.clear();
+    }
+    void split_with_chord(vector<polygon> first_cut_result, vector<polygon> remain_hole);
+    void initial_hole_list(size_t n){hole_list = new list<Node*>[n]; num_hole = n;}
+
+    vector<polygon> get_first_vec(){return first;}
+    vector<polygon> get_remain_vec(){return remain;}
+
+private:
+    Node* start_v; // start
+    vector<Node*> node_list;
+    //vector<Node*> hole_list;
+    list<Node*> *hole_list;
+    vector<Node*> con_v;
+    size_t num_hole;
+    vector<polygon> first;
+    vector<polygon> remain;
+};
 
 class myPolygon
 {
